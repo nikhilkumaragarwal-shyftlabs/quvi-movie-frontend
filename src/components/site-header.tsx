@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
+import { QuviLogo } from "@/components/quvi-logo";
 import { ApiError } from "@/lib/api";
 
 export function SiteHeader() {
@@ -20,8 +21,12 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="font-display text-2xl font-black tracking-tight text-foreground">
-          Quvi
+        <Link
+          href="/"
+          className="transition-opacity hover:opacity-90"
+          aria-label="Quvi home"
+        >
+          <QuviLogo />
         </Link>
 
         <form onSubmit={onSearch} className="hidden flex-1 md:block">

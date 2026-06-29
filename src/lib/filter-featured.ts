@@ -4,13 +4,17 @@ import { filterByFeaturedKeys } from "@/lib/streaming-platforms";
 
 export async function filterFeaturedCatalog<T extends Pick<CatalogItem, "id" | "mediaType">>(
   items: T[],
+  region?: string,
+  limit = 12,
 ): Promise<T[]> {
   if (items.length === 0) return [];
 
-  const region = await detectRegion();
+  const resolvedRegion = region ?? (await detectRegion());
+  const pool = items.slice(0, Math.max(limit * 2, 18));
   const available = await api.filterFeatured(
-    items.map(({ id, mediaType }) => ({ id, mediaType })),
-    region,
+    pool.map(({ id, mediaType }) => ({ id, mediaType })),
+    resolvedRegion,
+    limit,
   );
   return filterByFeaturedKeys(items, available);
 }

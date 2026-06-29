@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
 import { ChatMovieStrip } from "@/components/chat-movie-strip";
 import { api, type CatalogItem } from "@/lib/api";
@@ -102,6 +101,12 @@ export function MovieChatBot() {
 
   const canReset = messages.length > 1 || input.length > 0 || !!error;
 
+  useEffect(() => {
+    if (!token) setOpen(false);
+  }, [token]);
+
+  if (authLoading || !token) return null;
+
   return (
     <>
       {open && (
@@ -149,15 +154,6 @@ export function MovieChatBot() {
             </header>
 
             <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
-              {!authLoading && !token && (
-                <div className="rounded-lg border border-border bg-elevated p-3 text-sm text-muted">
-                  <Link href="/login" className="text-gold hover:underline">
-                    Sign in
-                  </Link>{" "}
-                  to ask for movie picks.
-                </div>
-              )}
-
               {messages.map((msg) => (
                 <div
                   key={msg.id}

@@ -147,6 +147,12 @@ class ApiError extends Error {
   }
 }
 
+async function parseJsonResponse<T>(res: Response): Promise<T> {
+  const text = await res.text();
+  if (!text.trim()) return null as T;
+  return JSON.parse(text) as T;
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {},
@@ -165,9 +171,11 @@ async function request<T>(
   if (!res.ok) {
     let message = res.statusText;
     try {
-      const body = await res.json();
-      message = body.message ?? body.error ?? message;
-      if (Array.isArray(message)) message = message.join(", ");
+      const body = await parseJsonResponse<{ message?: string; error?: string }>(res);
+      if (body && typeof body === "object") {
+        message = body.message ?? body.error ?? message;
+        if (Array.isArray(message)) message = message.join(", ");
+      }
     } catch {
       /* ignore */
     }
@@ -175,7 +183,7 @@ async function request<T>(
   }
 
   if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+  return parseJsonResponse<T>(res);
 }
 
 export const api = {
@@ -217,15 +225,21 @@ export const api = {
       `/movies/platforms/${slug}?type=${type}&region=${encodeURIComponent(region)}`,
     ),
 
+  allPlatformCatalogs: (region: string) =>
+    request<Record<string, { movies: CatalogItem[]; tv: CatalogItem[] }>>(
+      `/movies/platforms/all/catalog?region=${encodeURIComponent(region)}`,
+    ),
+
   filterFeatured: (
     items: { id: number; mediaType: "movie" | "tv" }[],
     region: string,
+    limit?: number,
   ) =>
     request<{ id: number; mediaType: "movie" | "tv" }[]>(
       "/movies/filter-featured",
       {
         method: "POST",
-        body: JSON.stringify({ items, region }),
+        body: JSON.stringify({ items, region, limit }),
       },
     ),
 
@@ -246,13 +260,17 @@ export const api = {
       `/movies/${mediaType}/${id}/watch?region=${encodeURIComponent(region)}`,
     ),
 
-  trailer: (mediaType: "movie" | "tv", id: number) =>
-    request<{
-      name: string;
-      site: string;
-      youtubeKey: string;
-      embedUrl: string;
-    } | null>(`/movies/${mediaType}/${id}/trailer`),
+  trailer: async (mediaType: "movie" | "tv", id: number) => {
+    const res = await request<{
+      trailer: {
+        name: string;
+        site: string;
+        youtubeKey: string;
+        embedUrl: string;
+      } | null;
+    }>(`/movies/${mediaType}/${id}/trailer`);
+    return res?.trailer ?? null;
+  },
 
   watchlist: (token: string) =>
     request<(CatalogDetail & { addedAt: string })[]>("/watchlist", {}, token),
@@ -268,8 +286,14 @@ export const api = {
       token,
     ),
 
-  getRating: (token: string, mediaType: "movie" | "tv", tmdbId: number) =>
-    request<UserRating | null>(`/ratings/${mediaType}/${tmdbId}`, {}, token),
+  getRating: async (token: string, mediaType: "movie" | "tv", tmdbId: number) => {
+    const res = await request<{ rating: UserRating | null }>(
+      `/ratings/${mediaType}/${tmdbId}`,
+      {},
+      token,
+    );
+    return res?.rating ?? null;
+  },
 
   rate: (
     token: string,
@@ -361,12 +385,14 @@ export const api = {
   ) =>
     request<ChatMoviesResponse>("/chat/movies", { method: "POST", body: JSON.stringify(data) }, token),
 
-  getFeedback: (token: string, mediaType: "movie" | "tv", tmdbId: number) =>
-    request<RecommendationFeedback | null>(
+  getFeedback: async (token: string, mediaType: "movie" | "tv", tmdbId: number) => {
+    const res = await request<{ feedback: RecommendationFeedback | null }>(
       `/feedback/${mediaType}/${tmdbId}`,
       {},
       token,
-    ),
+    );
+    return res?.feedback ?? null;
+  },
 
   submitFeedback: (
     token: string,

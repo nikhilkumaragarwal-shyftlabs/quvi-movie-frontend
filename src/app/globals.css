@@ -59,3 +59,26 @@ body {
 .animate-fade-in {
   animation: fade-in 0.4s ease-out forwards;
 }
+
+/* Quvi marquee-frame logo */
+.quvi-marquee {
+  position: relative;
+  border: 1.5px dashed var(--accent);
+}
+
+.quvi-marquee-dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--accent);
+}
+
+.quvi-marquee-dot-tl { top: -3px; left: -3px; }
+.quvi-marquee-dot-tr { top: -3px; right: -3px; }
+.quvi-marquee-dot-bl { bottom: -3px; left: -3px; }
+.quvi-marquee-dot-br { bottom: -3px; right: -3px; }
+.quvi-marquee-dot-mt { top: -3px; left: 50%; transform: translateX(-50%); }
+.quvi-marquee-dot-mb { bottom: -3px; left: 50%; transform: translateX(-50%); }
+.quvi-marquee-dot-ml { left: -3px; top: 50%; transform: translateY(-50%); }
+.quvi-marquee-dot-mr { right: -3px; top: 50%; transform: translateY(-50%); }

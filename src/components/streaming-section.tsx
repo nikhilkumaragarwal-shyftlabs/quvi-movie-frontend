@@ -107,7 +107,7 @@ export function StreamingSection({
         </ul>
       )}
 
-      <p className="mt-4 text-xs text-muted">
+      {/* <p className="mt-4 text-xs text-muted">
         Data by{" "}
         <a
           href="https://www.justwatch.com"
@@ -117,7 +117,7 @@ export function StreamingSection({
         >
           JustWatch
         </a>
-      </p>
+      </p> */}
     </section>
   );
 }

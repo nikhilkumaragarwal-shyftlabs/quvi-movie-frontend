@@ -9,7 +9,7 @@ export async function detectRegion(): Promise<string> {
 
   try {
     const res = await fetch("https://ipapi.co/country_code/", {
-      signal: AbortSignal.timeout(4000),
+      signal: AbortSignal.timeout(2000),
     });
     if (res.ok) {
       const code = (await res.text()).trim().toUpperCase();

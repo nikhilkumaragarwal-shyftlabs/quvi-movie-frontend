@@ -5,15 +5,36 @@ import Link from "next/link";
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { api, type CatalogItem } from "@/lib/api";
+import { detectRegion } from "@/lib/detect-region";
 import { filterFeaturedCatalog } from "@/lib/filter-featured";
 import { MovieGrid, SectionTitle } from "@/components/movie-card";
+
+function HeroSkeleton() {
+  return (
+    <section className="relative h-[50vh] min-h-[320px] w-full animate-pulse bg-surface" />
+  );
+}
+
+function GridSkeleton({ title }: { title: string }) {
+  return (
+    <section>
+      <SectionTitle>{title}</SectionTitle>
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="aspect-[2/3] animate-pulse rounded-lg bg-surface" />
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export function HomeCatalog({ afterHero }: { afterHero?: ReactNode }) {
   const [hero, setHero] = useState<CatalogItem | null>(null);
   const [trending, setTrending] = useState<CatalogItem[]>([]);
   const [popularMovies, setPopularMovies] = useState<CatalogItem[]>([]);
   const [popularTv, setPopularTv] = useState<CatalogItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [heroReady, setHeroReady] = useState(false);
+  const [catalogReady, setCatalogReady] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -21,31 +42,36 @@ export function HomeCatalog({ afterHero }: { afterHero?: ReactNode }) {
 
     (async () => {
       try {
-        const [trendingRaw, popularMoviesRaw, popularTvRaw] = await Promise.all([
-          api.trending("all"),
+        const region = await detectRegion();
+        const trendingRaw = await api.trending("all");
+
+        const trendingFiltered = await filterFeaturedCatalog(trendingRaw, region, 12);
+        if (cancelled) return;
+
+        setTrending(trendingFiltered);
+        setHero(trendingFiltered[0] ?? null);
+        setHeroReady(true);
+
+        const [popularMoviesRaw, popularTvRaw] = await Promise.all([
           api.popular("movie"),
           api.popular("tv"),
         ]);
 
-        const [trendingFiltered, popularMoviesFiltered, popularTvFiltered] =
-          await Promise.all([
-            filterFeaturedCatalog(trendingRaw),
-            filterFeaturedCatalog(popularMoviesRaw),
-            filterFeaturedCatalog(popularTvRaw),
-          ]);
+        const [popularMoviesFiltered, popularTvFiltered] = await Promise.all([
+          filterFeaturedCatalog(popularMoviesRaw, region, 12),
+          filterFeaturedCatalog(popularTvRaw, region, 12),
+        ]);
 
         if (cancelled) return;
 
-        setTrending(trendingFiltered.slice(0, 12));
-        setPopularMovies(popularMoviesFiltered.slice(0, 12));
-        setPopularTv(popularTvFiltered.slice(0, 12));
-        setHero(trendingFiltered[0] ?? null);
+        setPopularMovies(popularMoviesFiltered);
+        setPopularTv(popularTvFiltered);
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : "Failed to load catalog");
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setCatalogReady(true);
       }
     })();
 
@@ -54,16 +80,10 @@ export function HomeCatalog({ afterHero }: { afterHero?: ReactNode }) {
     };
   }, []);
 
-  if (loading) {
-    return (
-      <div className="py-16 text-center text-sm text-muted">
-        Loading titles on Netflix, HBO Max, Apple TV+, Hulu, and Peacock…
-      </div>
-    );
-  }
-
   return (
     <>
+      {!heroReady && <HeroSkeleton />}
+
       {hero?.backdropUrl && (
         <section className="relative h-[50vh] min-h-[320px] w-full overflow-hidden">
           <Image
@@ -111,20 +131,30 @@ export function HomeCatalog({ afterHero }: { afterHero?: ReactNode }) {
           </div>
         )}
 
-        <section>
-          <SectionTitle>Trending</SectionTitle>
-          <MovieGrid items={trending} />
-        </section>
+        {!catalogReady ? (
+          <>
+            <GridSkeleton title="Trending" />
+            <GridSkeleton title="Popular movies" />
+            <GridSkeleton title="Popular TV" />
+          </>
+        ) : (
+          <>
+            <section>
+              <SectionTitle>Trending</SectionTitle>
+              <MovieGrid items={trending} />
+            </section>
 
-        <section>
-          <SectionTitle>Popular movies</SectionTitle>
-          <MovieGrid items={popularMovies} />
-        </section>
+            <section>
+              <SectionTitle>Popular movies</SectionTitle>
+              <MovieGrid items={popularMovies} />
+            </section>
 
-        <section>
-          <SectionTitle>Popular TV</SectionTitle>
-          <MovieGrid items={popularTv} />
-        </section>
+            <section>
+              <SectionTitle>Popular TV</SectionTitle>
+              <MovieGrid items={popularTv} />
+            </section>
+          </>
+        )}
       </div>
     </>
   );
